@@ -21,8 +21,8 @@ from sklearn.cross_validation import KFold
 
 train = pickle.load(open("data/train_preprocessed.pkl","rb"))
 test = pickle.load(open("data/test_preprocessed.pkl","rb"))
-test_for_ID = pd.read_csv('Data/test.csv')
-PassengerId = test_for_ID['PassengerId']
+PassengerId = test['PassengerId']
+test = test.drop('PassengerId', axis = 1)
 # Some useful parameters which will come in handy later on
 ntrain = train.shape[0]
 ntest = test.shape[0]
@@ -46,7 +46,7 @@ class SklearnHelper(object):
         return self.clf.fit(x,y)
     
     def feature_importances(self,x,y):
-        print(self.clf.fit(x,y).feature_importances_)
+        return self.clf.fit(x,y).feature_importances_
         
 def get_oof(clf, x_train, y_train, x_test):
     oof_train = np.zeros((ntrain,))
@@ -110,7 +110,7 @@ svc_params = {
     'C' : 0.025
     }
 
-# Create 5 objects that represent our 4 models
+# Create 5 objects that represent our 5 models
 rf = SklearnHelper(clf=RandomForestClassifier, seed=SEED, params=rf_params)
 et = SklearnHelper(clf=ExtraTreesClassifier, seed=SEED, params=et_params)
 ada = SklearnHelper(clf=AdaBoostClassifier, seed=SEED, params=ada_params)
@@ -133,19 +133,13 @@ svc_oof_train, svc_oof_test = get_oof(svc,x_train, y_train, x_test) # Support Ve
 print("Training is complete")
 
 
-rf_feature = rf.feature_importances(x_train,y_train)
-et_feature = et.feature_importances(x_train, y_train)
-ada_feature = ada.feature_importances(x_train, y_train)
-gb_feature = gb.feature_importances(x_train,y_train)
+rf_features = rf.feature_importances(x_train,y_train)
+et_features = et.feature_importances(x_train, y_train)
+ada_features = ada.feature_importances(x_train, y_train)
+gb_features = gb.feature_importances(x_train,y_train)
+print('rf_features:',rf_features,'\net_features:',et_features,\
+      '\nada_features:',ada_features,'\ngb_features:',gb_features)
 
-rf_features = [0.10474135,  0.21837029,  0.04432652,  0.02249159,  0.05432591,  0.02854371
-  ,0.07570305,  0.01088129 , 0.24247496,  0.13685733 , 0.06128402]
-et_features = [ 0.12165657,  0.37098307  ,0.03129623 , 0.01591611 , 0.05525811 , 0.028157
-  ,0.04589793 , 0.02030357 , 0.17289562 , 0.04853517,  0.08910063]
-ada_features = [0.028 ,   0.008  ,      0.012   ,     0.05866667,   0.032 ,       0.008
-  ,0.04666667 ,  0.     ,      0.05733333,   0.73866667,   0.01066667]
-gb_features = [ 0.06796144 , 0.03889349 , 0.07237845 , 0.02628645 , 0.11194395,  0.04778854
-  ,0.05965792 , 0.02774745,  0.07462718,  0.4593142 ,  0.01340093]
 
 cols = train.columns.values
 # Create a dataframe with features
@@ -182,10 +176,13 @@ gbm = xgb.XGBClassifier(
  nthread= -1,
  scale_pos_weight=1).fit(x_train, y_train)
 predictions = gbm.predict(x_test)
-#predictions = gbm.predict(x_test)
+#predictions = gbm.predict(x_train)
 
-#base_score = np.sum((np.tile(y_train,(4,1)).T == base_predictions_train),axis = 0)/len(predictions)
-#score = sum(y_train == predictions)/len(predictions)
+# =============================================================================
+# base_score = np.sum((np.tile(y_train,(4,1)).T == base_predictions_train),axis = 0)/len(predictions)
+# stack_score = sum(y_train == predictions)/len(predictions)
+# print('base_score:\n',base_score,'\nstack_score=',stack_score)
+# =============================================================================
 
 # Generate Submission File 
 StackingSubmission = pd.DataFrame({ 'PassengerId': PassengerId,

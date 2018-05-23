@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import re
 import pickle
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -42,12 +44,40 @@ for dataset in full_data:
 train['CategoricalFare'] = pd.qcut(train['Fare'], 4)
 # Create a New feature CategoricalAge
 for dataset in full_data:
-    age_avg = dataset['Age'].mean()
-    age_std = dataset['Age'].std()
-    age_null_count = dataset['Age'].isnull().sum()
-    age_null_random_list = np.random.randint(age_avg - age_std, age_avg + age_std, size=age_null_count)
-    dataset['Age'][np.isnan(dataset['Age'])] = age_null_random_list
+    # Mapping Sex
+    dataset['Sex'] = dataset['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
+for dataset in full_data:
+    guess_ages = np.zeros([2,3])
+    for i in range(0, 2):
+        for j in range(0, 3):
+            guess_df = dataset[(dataset['Sex'] == i) & \
+                                  (dataset['Pclass'] == j+1)]['Age'].dropna()
+
+            # age_mean = guess_df.mean()
+            # age_std = guess_df.std()
+            # age_guess = rnd.uniform(age_mean - age_std, age_mean + age_std)
+
+            age_guess = guess_df.median()
+
+            # Convert random age float to nearest .5 age
+            guess_ages[i,j] = int( age_guess/0.5 + 0.5 ) * 0.5
+            
+    for i in range(0, 2):
+        for j in range(0, 3):
+            dataset.loc[ (dataset.Age.isnull()) & (dataset.Sex == i) & (dataset.Pclass == j+1),\
+                    'Age'] = guess_ages[i,j]
+
     dataset['Age'] = dataset['Age'].astype(int)
+# =============================================================================
+## random fill nan age
+# for dataset in full_data:
+#     age_avg = dataset['Age'].mean()
+#     age_std = dataset['Age'].std()
+#     age_null_count = dataset['Age'].isnull().sum()
+#     age_null_random_list = np.random.randint(age_avg - age_std, age_avg + age_std, size=age_null_count)
+#     dataset['Age'][np.isnan(dataset['Age'])] = age_null_random_list
+#     dataset['Age'] = dataset['Age'].astype(int)
+# =============================================================================
 train['CategoricalAge'] = pd.cut(train['Age'], 5)
 # Define function to extract titles from passenger names
 def get_title(name):
@@ -68,9 +98,6 @@ for dataset in full_data:
     dataset['Title'] = dataset['Title'].replace('Mme', 'Mrs')
 
 for dataset in full_data:
-    # Mapping Sex
-    dataset['Sex'] = dataset['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
-    
     # Mapping titles
     title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
     dataset['Title'] = dataset['Title'].map(title_mapping)
@@ -93,10 +120,15 @@ for dataset in full_data:
     dataset.loc[(dataset['Age'] > 48) & (dataset['Age'] <= 64), 'Age'] = 3
     dataset.loc[ dataset['Age'] > 64, 'Age'] = 4 ;
     
+    # Mapping FamilySize 
+    dataset.loc[ dataset['FamilySize'] <= 1, 'FamilySize'] 				= 1
+    dataset.loc[(dataset['FamilySize'] > 1) & (dataset['FamilySize'] <= 4), 'FamilySize'] = 2
+    dataset.loc[(dataset['FamilySize'] > 4) , 'FamilySize'] = 3
     
 # Feature selection
-drop_elements = ['PassengerId', 'Name', 'Ticket', 'Cabin', 'SibSp']
+drop_elements = ['Name', 'Ticket', 'Cabin', 'SibSp', 'Parch', 'Name_length']
 train = train.drop(drop_elements, axis = 1)
+train = train.drop('PassengerId', axis = 1)
 train = train.drop(['CategoricalAge', 'CategoricalFare'], axis = 1)
 test  = test.drop(drop_elements, axis = 1)
 

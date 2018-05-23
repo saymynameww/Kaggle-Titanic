@@ -1,0 +1,3 @@
+Sub02 Score0.79904:Age的缺失值填充方式由“随机”改为“与Sex和Pclass相关的填充” 
+Sub03 Score0.79904:Familysize改为三个band 
+Sub04 Score0.79904:去除Namelength
